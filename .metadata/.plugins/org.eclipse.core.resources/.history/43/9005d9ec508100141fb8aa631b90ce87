@@ -1,0 +1,95 @@
+package com.algorithm.pairs;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.StringTokenizer;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reporter;
+
+public class RelativeFrequencyMapper implements Mapper<LongWritable, Text, Pair, IntWritable> {
+  
+    private static HashMap<Pair,Integer> pairs = new HashMap<Pair,Integer>();
+    List<Long>ipList = new ArrayList<Long>();
+    OutputCollector<Pair,IntWritable> op;
+    IntWritable s = new IntWritable();
+	@Override
+	public void map(LongWritable ipKey, Text value,
+			OutputCollector<Pair, IntWritable> hMapOP, Reporter rp)
+			throws IOException {   	
+		op = hMapOP;
+		StringTokenizer ipValues = new StringTokenizer(value.toString());
+		while(ipValues.hasMoreTokens()){
+			ipList.add( Long.parseLong(ipValues.nextToken()));
+		}
+    	
+        //If more than one word is present, split using white space.       
+		Pair p = new Pair();
+		Pair p0 = new Pair();
+		for(int i=0;i<ipList.size()-2;i++)
+        {         	
+        	 
+        	for(int j=i+1;j<ipList.size()-1;j++)
+        	{   
+        		
+        		 p.setB(ipList.get(j));
+        		 p.setA(ipList.get(i));
+        		 p0.setA(ipList.get(i));
+        		 p0.setB(0);
+        		
+        		if(ipList.get(i)==ipList.get(j))
+        			break;
+        		
+        		if(pairs.containsKey(p))     
+        		{
+            		pairs.put(p, pairs.get(p)+1) ;   
+            		pairs.put(p0,pairs.get(p0)+1) ; 
+        		}
+        		
+        		else 
+        		{      	
+        			pairs.put(p0,1) ; 
+            		pairs.put(p,1) ;  
+            		p0=new Pair();
+            		p=new Pair();
+        		}
+        		
+        	}       	      	
+        	
+        } 
+    }  
+    @Override
+    public void close() throws IOException{    	
+			try {
+				flush();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		
+    }
+    
+    private void flush() throws IOException, InterruptedException
+    {
+    	 for(Pair p:pairs.keySet()){
+         	 s.set(pairs.get(p));
+         	 op.collect(p, s);
+         }
+    	 pairs.clear();
+    }
+
+	@Override
+	public void configure(JobConf arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+}

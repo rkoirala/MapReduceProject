@@ -1,0 +1,118 @@
+package com.algorithm.stripes;
+
+import java.io.IOException;
+import java.util.*;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.util.Tool;
+
+
+
+public class PairsApproach extends Configured implements Tool{
+
+	public static class MyMap extends
+			Mapper<LongWritable, Text, Text, IntWritable> {
+
+		private Map<String, Integer> map = new HashMap<String, Integer>();
+
+		public void map(LongWritable key, Text value, Context context)
+				throws IOException, InterruptedException {
+			String[] words = value.toString().split(" ");
+
+			for (int i = 0; i < words.length; i++) {
+				String term = words[i];
+				for (int j = i + 1; j < words.length; j++) {
+					if (term.equals(words[j]))
+						break;
+
+					String keyTerm = "(" + term + "," + words[j] + ")";
+					String countTerm = "(" + term + ",*" + ")";
+
+					if (!map.containsKey(keyTerm)) {
+						map.put(keyTerm, 1);
+					} else {
+						map.put(keyTerm, map.get(keyTerm) + 1);
+					}
+
+					if (!map.containsKey(countTerm)) {
+						map.put(countTerm, 1);
+					} else {
+						map.put(countTerm, map.get(countTerm) + 1);
+					}
+				}
+			}
+		}
+
+		protected void cleanup(Context context) throws IOException,
+				InterruptedException {
+			Iterator it = map.entrySet().iterator();
+			while (it.hasNext()) {
+				Map.Entry pairs = (Map.Entry) it.next();
+				context.write(new Text(pairs.getKey().toString()),
+						new IntWritable((Integer) pairs.getValue()));
+				it.remove();
+			}
+		}
+	}
+
+	public static class MyReduce extends Reducer<Text, IntWritable, Text, Text> {
+		int totalCount = 0;
+
+		public void reduce(Text key, Iterable<IntWritable> values,
+				Context context) throws IOException, InterruptedException {
+			int sum = 0;
+			for (IntWritable val : values) {
+				sum += val.get();
+			}
+
+			if (key.toString().contains("*")) {
+				totalCount = sum;
+			} else {
+				double value = (double) sum / (double) totalCount;
+				context.write(key, new Text(value + ""));
+			}
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		int res = ToolRunner.run(new Configuration(), new PairsApproach(), args);
+	}
+
+	public int run(String[] args) throws Exception {
+		if (args.length != 2) {
+			System.out.println("usage: [input] [output]");
+			System.exit(-1);
+		}
+			Job job = Job.getInstance(new Configuration());
+			job.setOutputKeyClass(Text.class);
+			job.setOutputValueClass(IntWritable.class);
+
+			job.setMapperClass(MyMap.class);
+			job.setReducerClass(MyReduce.class);
+
+			job.setInputFormatClass(TextInputFormat.class);
+			job.setOutputFormatClass(TextOutputFormat.class);
+
+			FileInputFormat.setInputPaths(job, new Path(args[0]));
+			FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+			job.setJarByClass(PairsApproach.class);
+
+			job.submit();
+			return 0;
+		}
+
+}

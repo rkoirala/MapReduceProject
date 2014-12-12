@@ -1,0 +1,78 @@
+package com.algorithm.pairs;
+
+import java.io.IOException;
+import java.util.Hashtable;
+import java.util.Set;
+
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reporter;
+
+public class PairsMap extends MapReduceBase implements Mapper<LongWritable, Text, Pair, DoubleWritable> {
+
+	private OutputCollector<Pair, DoubleWritable> collector = null;
+	Hashtable<Pair, DoubleWritable> table=new Hashtable();
+
+	public void map(LongWritable key, Text value,OutputCollector<Pair, DoubleWritable> output, Reporter reporter) throws IOException {
+		String line = value.toString();
+		DoubleWritable one = new DoubleWritable(1);
+		DoubleWritable oneTemp= new DoubleWritable(1);
+		int i =0;
+		String[] tokenizer = line.split(" ");
+		String[] strarr =line.split(" ");
+
+		Pair p=new Pair();
+		collector = output;
+		for(String s :tokenizer ) {
+			i++;
+			for(int y=i;y<strarr.length;y++)
+			{
+				if(!strarr[y].equals(s))
+				{
+					one = new DoubleWritable(1);
+					oneTemp= new DoubleWritable(1);
+					p=new Pair();
+					p.Firstword= Long.parseLong(s);
+					p.Second=strarr[y];
+
+					if(table.containsKey(p))
+					{
+						one=table.get(p);
+						one.set(one.get()+1);
+					}
+					table.put(p,one);
+
+					p=new Pair();
+					p.Firstword= Long.parseLong(s);
+					p.Second="*";
+					if(table.containsKey(p))
+					{
+						oneTemp = table.get(p);
+						oneTemp.set(oneTemp.get()+1);
+
+					}
+					table.put(p, oneTemp);
+
+				}
+				else
+				{
+					break;
+				}
+			}
+		}
+	}
+	@Override
+	public void close() throws IOException {
+		Set<Pair> keys =table.keySet();
+		for(Pair key :keys)
+		{
+			DoubleWritable d=table.get(key);
+			collector.collect(key, d);
+
+		}
+	}
+

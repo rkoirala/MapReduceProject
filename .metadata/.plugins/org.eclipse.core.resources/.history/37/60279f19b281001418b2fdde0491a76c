@@ -1,0 +1,45 @@
+package com.algorithm.stripes;
+
+public class StripesMapper extends MapReduceBase implements
+		Mapper<LongWritable, Text, LongWritable, MapWritable> {
+
+	public void map(LongWritable key, Text value,
+			OutputCollector<LongWritable, MapWritable> output, Reporter reporter)
+			throws IOException {
+		String line = value.toString();
+		int i = 0;
+		DoubleWritable one = new DoubleWritable(1);
+
+		MapWritable hash = new MapWritable();
+
+		String[] tokenizer = line.split(" ");
+		String[] strarr = line.split(" ");
+		Text word2 = new Text();
+
+		for (String s : tokenizer) {
+			i++;
+			hash = new MapWritable();
+			for (int y = i; y < strarr.length; y++) {
+				if (!strarr[y].equals(s)) {
+					word2 = new Text();
+					word2.set(strarr[y]);
+					one = new DoubleWritable(1);
+					if (hash.containsKey(strarr[y])) {
+						one = (DoubleWritable) (hash.get(strarr[y]));
+						one.set(one.get() + 1);
+						hash.put(word2, one);
+					} else {
+						hash.put(word2, one);
+					}
+				} else {
+					break;
+				}
+			}
+
+			long l = Long.parseLong(s);
+			LongWritable lon = new LongWritable();
+			lon.set(l);
+			output.collect(lon, hash);
+		}
+	}
+}

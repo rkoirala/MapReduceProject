@@ -1,0 +1,123 @@
+package com.algorithm.stripes;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+
+public class StripesApproach extends Configured implements Tool {
+
+	public static class MyMap extends
+			Mapper<LongWritable, Text, Text, MapWritable> {
+
+		public void map(LongWritable key, Text value, Context context)
+				throws IOException, InterruptedException {
+
+			String[] words = value.toString().split(" ");
+
+			for (int i = 0; i < words.length; i++) {
+				MapWritable stripe = new MapWritable();
+				String termToProcess = words[i];
+
+				for (int j = i + 1; j < words.length; j++) {
+					if (termToProcess.equals(words[j]))
+						break;
+					if (stripe.containsKey(words[j])) {
+						IntWritable textValue = (IntWritable) stripe
+								.get(words[j]);
+						stripe.put(new Text(words[j]), new IntWritable(
+								textValue.get() + 1));
+					} else {
+						stripe.put(new Text(words[j]), new IntWritable(1));
+					}
+				}
+				if (!stripe.isEmpty()) {
+					context.write(new Text(termToProcess), stripe);
+				}
+			}
+		}
+	}
+
+	public static class MyReduce extends Reducer<Text, MapWritable, Text, Text> {
+
+		public void reduce(Text key, Iterable<MapWritable> values,
+				Context context) throws IOException, InterruptedException {
+			Map<String, Integer> map = new HashMap<String, Integer>();
+			for (MapWritable listStripePair : values) {
+				for (Entry<Writable, Writable> pair : listStripePair.entrySet()) {
+					if (map.containsKey(pair.getKey())) {
+						map.put(pair.getKey().toString(),
+								((IntWritable) pair.getValue()).get()
+										+ map.get(pair.getKey().toString()));
+					} else {
+						map.put(pair.getKey().toString(),
+								((IntWritable) pair.getValue()).get());
+					}
+				}
+			}
+
+			int totalCount = 0;
+			for (Map.Entry entry : map.entrySet()) {
+				totalCount += (Integer) entry.getValue();
+			}
+
+			Double doubleTotalCount = (double) totalCount;
+
+			StringBuilder stringBuilder = new StringBuilder();
+
+			for (Map.Entry entry : map.entrySet()) {
+				stringBuilder.append(entry.getKey()).append(" : ")
+						.append((Integer) entry.getValue() / doubleTotalCount)
+						.append(" ; ");
+			}
+			context.write(key, new Text("(" + stringBuilder.toString() + ")"));
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		int res = ToolRunner.run(new Configuration(), new StripesApproach(),
+				args);
+		System.exit(res);
+	}
+
+	@Override
+	public int run(String[] args) throws Exception {
+		if (args.length != 2) {
+			System.out.println("usage: [input] [output]");
+			System.exit(-1);
+		}
+
+		Job job = Job.getInstance(new Configuration());
+
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(Text.class);
+
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(MapWritable.class);
+
+		job.setMapperClass(MyMap.class);
+		job.setReducerClass(MyReduce.class);
+
+		job.setInputFormatClass(TextInputFormat.class);
+		job.setOutputFormatClass(TextOutputFormat.class);
+
+		FileInputFormat.setInputPaths(job, new Path(args[0]));
+		FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+		job.setJarByClass(StripesApproach.class);
+
+		job.submit();
+		job.waitForCompletion(true);
+		return 0;
+	}
+}

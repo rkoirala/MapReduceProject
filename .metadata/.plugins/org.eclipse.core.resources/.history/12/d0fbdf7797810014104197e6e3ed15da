@@ -1,5 +1,5 @@
 package com.algorithm.pairs;
 
-public class Application {
+public class PairsReducer {
 
 }

@@ -1,0 +1,56 @@
+package com.algorithm.stripes;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class StripesReducer extends Reducer
+{
+      //Reduce method for just outputting the key from mapper as the value from mapper is just an empty string   
+      public void reduce(Text key, Iterable values, Context context) throws IOException, InterruptedException
+      {
+            MapWritable hash = new MapWritable();
+            MapWritable outhash = new MapWritable();
+            Iterator entries;
+            Iterator entries2;
+            Iterator entries3;
+            Iterator entries4;
+            Iterator entries5;
+            IntWritable count;
+            String output = new String();
+            double sum=0;
+            /*iterates through all the values available with a key and add them together and give the
+            final result as the key and sum of its values*/
+            for (Object value : values)
+            {
+             entries = ((MapWritable) value).entrySet().iterator();
+             
+             while(entries.hasNext()){
+              Map.Entry pairs = (Map.Entry) entries.next();
+              if(hash.containsKey(pairs.getKey())){
+               count = (IntWritable) hash.get(pairs.getKey());
+               hash.put((Writable) pairs.getKey(), new IntWritable(count.get() + ((IntWritable) pairs.getValue()).get()));
+               sum=sum+((IntWritable) pairs.getValue()).get();
+              }
+              else{
+               sum=sum+((IntWritable) pairs.getValue()).get();
+               hash.put(pairs.getKey(), pairs.getValue());
+              }
+             }
+             }
+            
+            System.out.println("Key: "+key.toString()+" Partial Sum: "+sum);
+            entries4 = hash.entrySet().iterator();
+            while(entries4.hasNext()){
+             Map.Entry pairs = (Map.Entry) entries4.next();
+             output=output+" "+pairs.getKey()+" : "+(double)pairs.getValue().get()/sum;
+            }
+            
+            context.write(key, new Text(output));
+       }
+}

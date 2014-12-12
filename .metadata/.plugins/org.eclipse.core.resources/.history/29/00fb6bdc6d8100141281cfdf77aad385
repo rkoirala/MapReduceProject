@@ -1,0 +1,76 @@
+package com.algorithm.stripes;
+
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.StringTokenizer;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+
+public class Mapper extends Mapper
+{
+      //hadoop supported data types
+      private Text word = new Text();
+         
+           public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException
+           {
+            int i=0;
+            int j=0;
+             //taking one line at a time and tokenizing the same
+               String line1 = value.toString();
+               String line2 = value.toString();
+               StringTokenizer tokenizer1 = new StringTokenizer(line1);
+               StringTokenizer tokenizer2;
+               Text word1 = new Text();
+               //Text word2 = new Text();
+               MapWritable hash;
+               IntWritable count;
+               Iterator entries;
+               String output = new String();
+           
+             //iterating through all the words available in that line and forming the key value pair
+               while (tokenizer1.hasMoreTokens())
+               {
+                i++;
+                j=0;
+                hash = new MapWritable();
+                word1.set(tokenizer1.nextToken());
+                tokenizer2 = new StringTokenizer(line2);
+                System.out.println("Word1: "+word1.toString());
+                while(tokenizer2.hasMoreTokens()){
+                 j++;
+                 Text word2 = new Text();
+                 word2.set(tokenizer2.nextToken());
+                 if(i==j){
+                  continue;
+                 }
+                 System.out.println("Word2: "+word2.toString());
+                 if(hash.containsKey(word2)){
+                  //System.out.println("Value: "+ hash.get(word2).toString());
+                  count = (IntWritable) hash.get(word2);
+                  hash.put(word2, new IntWritable(count.get()+1));
+                  System.out.println("Value: "+ hash.get(word2).toString());
+                 }
+                 else{
+                  System.out.println("First time add: "+word2.toString());
+                  hash.put(word2, new IntWritable(1));
+                 }
+                 
+                }
+                entries = hash.entrySet().iterator();
+                while(entries.hasNext()){
+                 Map.Entry pairs = (Map.Entry) entries.next();
+                       output=output+" "+pairs.getKey().toString()+" : "+pairs.getValue().toString();
+                }
+                System.out.println("Hash :"+output);
+                output = new String();
+                  word.set(word1);
+                  //sending to output collector which inturn passes the same to reducer
+                  context.write(word, hash);
+               }
+           }
+ }

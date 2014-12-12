@@ -1,0 +1,103 @@
+package com.algorithm.stripes;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
+
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.Reducer.Context;
+
+public class StripesReducer extends Reducer<Text, IntWritable, Text, Text> {
+
+	private long mTotal = 0;
+	private String mPrevLeftKey = null;
+	private Map<String, Integer> mMap = new TreeMap();
+
+	public void reduce(Text key, Iterable<IntWritable> values, Context context)
+			throws IOException, InterruptedException {
+
+		float sum = 0;
+		String currLeftKey = key.toString().split(",")[0];
+		String rightKey = key.toString().split(",")[1];
+
+		if (mPrevLeftKey != null && !mPrevLeftKey.equals(currLeftKey)) {
+
+			flush(context);
+
+			// reset intermediate result
+			mTotal = 0;
+			mPrevLeftKey = currLeftKey;
+			mMap = new HashMap();
+		}
+
+		for (IntWritable val : values) {
+
+			Integer oldV = mMap.get(rightKey);
+
+			if (oldV != null) {
+				mMap.put(rightKey, val.get() + oldV);
+			} else {
+				mMap.put(rightKey, val.get());
+			}
+
+			sum += val.get();
+		}
+
+		mPrevLeftKey = currLeftKey;
+		mTotal += sum;
+	}
+
+	@Override
+	protected void setup(Context context) throws IOException,
+			InterruptedException {
+
+		super.setup(context);
+	}
+
+	@Override
+	protected void cleanup(Context context) throws IOException,
+			InterruptedException {
+
+		flush(context);
+		super.cleanup(context);
+	}
+
+	private void flush(Context context) throws IOException,
+			InterruptedException {
+		Iterator<Entry<String, Integer>> it = mMap.entrySet().iterator();
+		Map<String, Float> updatedPairs = new TreeMap<String, Float>();
+
+		while (it.hasNext()) {
+			Map.Entry<String, Integer> pairs = (Map.Entry<String, Integer>) it
+					.next();
+			updatedPairs.put(pairs.getKey(), (float) pairs.getValue() / mTotal);
+		}
+		String output = getMapAsString(updatedPairs);
+		context.write(new Text(mPrevLeftKey), new Text(output));
+	}
+
+	public static String getMapAsString(Map<String, Float> map) {
+		if (map == null) {
+			return "";
+		}
+
+		StringBuilder builder = new StringBuilder();
+		String ret = "";
+
+		Iterator<Entry<String, Float>> it = map.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<String, Float> pairs = (Map.Entry<String, Float>) it
+					.next();
+			builder.append(String.format("(%s,%s)", pairs.getKey(),
+					pairs.getValue()));
+			builder.append(" ");
+		}
+
+		// remove the last space if it exists
+		if (builder.length() > 0) {
+			ret = builder.substring(0, builder.length() - 1);
+		}
+		return ret;
+	}
+}
