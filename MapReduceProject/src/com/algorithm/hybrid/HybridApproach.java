@@ -28,7 +28,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-public class PairsStripesAlgorithm extends Configured implements Tool {
+public class HybridApproach extends Configured implements Tool {
 	public static class ParisStripesMapper extends
 			Mapper<LongWritable, Text, Text, IntWritable> {
 		private final static IntWritable count = new IntWritable(1);
@@ -171,7 +171,7 @@ public class PairsStripesAlgorithm extends Configured implements Tool {
 
 	public static void main(String[] args) throws Exception {
 		int res = ToolRunner.run(new Configuration(),
-				new PairsStripesAlgorithm(), args);
+				new HybridApproach(), args);
 		System.exit(res);
 	}
 
@@ -195,7 +195,7 @@ public class PairsStripesAlgorithm extends Configured implements Tool {
 		FileInputFormat.setInputPaths(job, new Path(args[0]));
 		FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
-		job.setJarByClass(PairsStripesAlgorithm.class);
+		job.setJarByClass(HybridApproach.class);
 		job.waitForCompletion(true);
 
 		job.submit();
