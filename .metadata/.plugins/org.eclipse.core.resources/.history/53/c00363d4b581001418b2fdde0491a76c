@@ -1,0 +1,153 @@
+package com.algorithm.stripes;
+
+import java.io.IOException;
+import java.util.*;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapred.*;
+
+public class Stripes {
+
+	public static class Map extends MapReduceBase implements Mapper<LongWritable, Text, LongWritable, MapWritable> {
+
+		public void map(LongWritable key, Text value, OutputCollector<LongWritable, MapWritable> output, Reporter reporter) throws IOException {
+			String line = value.toString();
+			int i =0;
+			DoubleWritable one = new DoubleWritable(1);
+
+			MapWritable hash=new MapWritable();
+
+			String[] tokenizer = line.split(" ");
+			String[] strarr =line.split(" ");
+			Text word2 = new Text();
+
+			for(String s :tokenizer ) {
+				i++;
+				hash=new MapWritable();
+				for(int y=i;y<strarr.length;y++)
+				{
+					if(!strarr[y].equals(s))
+					{ 
+						word2 = new Text();
+						word2.set(strarr[y]);
+						one = new DoubleWritable(1);
+						if(hash.containsKey(strarr[y]))
+						{
+							one=(DoubleWritable)(hash.get(strarr[y])); 
+							one.set(one.get()+1);
+							hash.put(word2,one);
+						}
+						else
+						{
+							hash.put(word2,one);
+						}
+					}
+					else
+					{
+						break;
+					}
+				}
+
+				long l=Long.parseLong(s);
+				LongWritable lon=new LongWritable();
+				lon.set(l);
+				output.collect(lon, hash);
+			}
+		}
+	}
+
+	public static class Reduce extends MapReduceBase implements Reducer<LongWritable,MapWritable, LongWritable, Text> {
+
+		double total=1;
+
+		public void reduce(LongWritable key, Iterator<MapWritable> values, OutputCollector<LongWritable, Text> output, Reporter reporter) throws IOException {
+			double sum = 0;
+
+
+			MapWritable hash=new MapWritable();
+			MapWritable tmp=new MapWritable();
+			Iterator<Writable> it;
+			Text tmpkey=new Text();
+			String strtmp;
+
+			DoubleWritable one = new DoubleWritable(1);
+			while (values.hasNext()) {
+				tmp=new MapWritable();
+				tmp=values.next();
+				it=tmp.keySet().iterator();
+
+				while(it.hasNext())
+				{
+					tmpkey=new Text();
+					tmpkey=(Text)it.next();
+					sum+=((DoubleWritable)tmp.get(tmpkey)).get();
+					one = new DoubleWritable(1);
+					if(hash.containsKey(tmpkey))
+					{
+
+						one=(DoubleWritable) hash.get(tmpkey);
+						one.set(one.get()+1);
+						hash.put(tmpkey, one);
+
+					}
+					else
+						hash.put(tmpkey, one);
+				}
+			}
+			for(Writable name:hash.keySet())
+			{
+				tmpkey=new Text();
+				tmpkey=(Text)name;
+				strtmp="";
+				strtmp+=tmpkey;
+				one = new DoubleWritable(1);
+				one=(DoubleWritable) hash.get(tmpkey);
+				one.set(one.get()/sum);
+				strtmp+="," + one.get();
+				tmpkey.set(strtmp);
+				output.collect(key, tmpkey);
+
+
+			}
+			//  output.collect(key, hash);
+
+		}
+	}
+	public class CustomPartitioner implements Partitioner<LongWritable, MapWritable>
+	{
+
+		@Override
+		public int getPartition(LongWritable key, MapWritable value, int numReduceTasks) 
+		{
+
+			return (int) key.get() % numReduceTasks;
+		}
+
+		@Override
+		public void configure(JobConf arg0) {
+			// TODO Auto-generated method stub
+
+		}
+	}
+	public static void main(String[] args) throws Exception {
+		JobConf conf = new JobConf(Stripes.class);
+
+		conf.setJobName("Stripes");
+
+		conf.setOutputKeyClass(LongWritable.class);
+		conf.setOutputValueClass(MapWritable.class);
+
+		conf.setMapperClass(Map.class);
+		conf.setPartitionerClass(CustomPartitioner.class);
+		conf.setReducerClass(Reduce.class);
+
+		conf.setInputFormat(TextInputFormat.class);
+		conf.setOutputFormat(TextOutputFormat.class);
+
+		FileInputFormat.setInputPaths(conf, new Path(args[0]));
+		FileOutputFormat.setOutputPath(conf, new Path(args[1]));
+
+		JobClient.runJob(conf);
+	}
+}

@@ -1,0 +1,40 @@
+/**
+*
+* @author rachana
+*/
+
+package com.algorithm.pairs;
+
+import java.io.IOException;
+import java.util.Iterator;
+
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
+
+
+public class RelativeFrequencyReducer extends Reducer<Pair, IntWritable, Pair, DoubleWritable> {
+	
+	double recentPairCount=0;
+	DoubleWritable freq = new DoubleWritable();
+	
+	@Override
+    public void reduce(Pair key, Iterable<IntWritable> values, Context output)
+            throws IOException, InterruptedException {
+        int total = 0;        
+        for(IntWritable value: values){
+            total+= value.get();
+        }
+        
+        if(key.neighbor()==0)
+        	recentPairCount=total;
+        else
+        {
+        	freq.set(total/recentPairCount);
+        	output.collect(key,freq);
+        }
+    }
+}

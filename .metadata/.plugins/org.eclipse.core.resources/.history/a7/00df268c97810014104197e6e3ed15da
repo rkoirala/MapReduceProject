@@ -1,0 +1,45 @@
+package com.algorithm.pairs;
+
+import java.io.IOException;
+import java.util.Iterator;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.FileOutputFormat;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Partitioner;
+import org.apache.hadoop.mapred.Reducer;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.mapred.TextOutputFormat;
+
+import com.algorithm.pairs.PairsInMapper.CustomPartitioner;
+import com.algorithm.pairs.PairsInMapper.Map;
+import com.algorithm.pairs.PairsInMapper.Reduce;
+
+public class PairsReducer extends MapReduceBase implements
+		Reducer<Pair, DoubleWritable, Pair, DoubleWritable> {
+
+	double total = 0;
+
+	public void reduce(Pair key, Iterator<DoubleWritable> values,
+			OutputCollector<Pair, DoubleWritable> output, Reporter reporter)
+			throws IOException {
+		double sum = 0;
+
+		while (values.hasNext()) {
+
+			sum += values.next().get();
+		}
+		if (key.Second.equals("*")) {
+			total = 0;
+			total = sum;
+
+		} else
+			output.collect(key, new DoubleWritable((sum / total)));
+	}
+}

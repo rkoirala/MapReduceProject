@@ -1,0 +1,199 @@
+package com.algorithm.hybrid;
+
+import java.io.IOException;
+import java.util.*;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapred.*;
+
+
+
+public class Hybrid {
+
+	public static class Map extends MapReduceBase implements Mapper<LongWritable, Text, Pair, DoubleWritable> {
+		// private final static DoubleWritable one = new DoubleWritable(0);
+		private OutputCollector<Pair, DoubleWritable> collector = null;
+		private Text word = new Text();
+		Hashtable<Pair, DoubleWritable> table=new Hashtable();
+
+		public void map(LongWritable key, Text value,OutputCollector<Pair, DoubleWritable> output, Reporter reporter) throws IOException {
+			String line = value.toString();
+			DoubleWritable one = new DoubleWritable(1);
+
+			int i =0;
+			String[] tokenizer = line.split(" ");
+			String[] strarr =line.split(" ");
+
+			collector = output;
+			Pair p=new Pair();
+			for(String s :tokenizer ) {
+				word.set(s);
+				i++;
+				for(int y=i;y<strarr.length;y++)
+				{
+
+					if(!strarr[y].equals(s))
+					{
+
+						one = new DoubleWritable(1);
+
+
+
+						p=new Pair();
+						p.Firstword= Long.parseLong(s);
+						p.Second=strarr[y];
+						if(table.containsKey(p))
+						{
+							one=table.get(p);
+							one.set(one.get()+1);
+
+						}
+
+
+						table.put(p,one);
+
+
+
+
+					}
+					else
+					{
+						break;
+					}
+				}
+			}
+		}
+		@Override
+		public void close() throws IOException {
+			Set<Pair> keys =table.keySet();
+			for(Pair key :keys)
+			{
+				DoubleWritable d=table.get(key);
+				collector.collect(key, d);
+
+			}
+		}
+
+
+	}
+
+
+	public static class Reduce extends MapReduceBase implements Reducer<Pair, DoubleWritable, LongWritable, Text> {
+
+		double total=0;
+		Long word=null;
+		MapWritable hash=new MapWritable();
+		private OutputCollector<LongWritable, Text> collector = null;
+		public void reduce(Pair key, Iterator<DoubleWritable> values, OutputCollector<LongWritable, Text> output, Reporter reporter) throws IOException {
+			double sum = 0;
+
+			Text tmpkey=new Text();
+			LongWritable tmp=new LongWritable();
+			String strtmp;
+			DoubleWritable one = new DoubleWritable(1);
+			collector=output;
+			if(word != null)
+			{
+				if( word!=key.Firstword )
+				{
+					for(Writable name:hash.keySet())
+					{
+						tmpkey=new Text();
+						tmpkey=(Text)name;
+						strtmp="";
+						strtmp+=tmpkey;
+						one = new DoubleWritable(1);
+						one=(DoubleWritable) hash.get(tmpkey);
+						one.set(one.get()/total);
+						strtmp+="," + one.get();
+						tmpkey.set(strtmp);
+						tmp=new LongWritable();
+						tmp.set(word);
+						output.collect(tmp, tmpkey);
+					}
+
+					word=key.Firstword;
+					hash=new MapWritable();
+					total=0;
+
+				}
+			}
+			word=key.Firstword;
+
+			while (values.hasNext()) {
+
+				sum += values.next().get();
+			}
+
+			tmpkey=new Text();
+			tmpkey.set(key.Second);
+			one = new DoubleWritable(1);
+			one.set(sum);
+			total+=sum;
+			hash.put(tmpkey, one);
+		}
+		@Override
+		public void close() throws IOException {
+			Text tmpkey=new Text();
+			LongWritable tmp=new LongWritable();
+			String strtmp;
+			DoubleWritable one = new DoubleWritable(1);
+			if(word !=null)
+			{
+				for(Writable name:hash.keySet())
+				{
+					tmpkey=new Text();
+					tmpkey=(Text)name;
+					strtmp="";
+					strtmp+=tmpkey;
+					one = new DoubleWritable(1);
+					one=(DoubleWritable) hash.get(tmpkey);
+					one.set(one.get()/total);
+					strtmp+="," + one.get();
+					tmpkey.set(strtmp);
+					tmp=new LongWritable();
+					tmp.set(word);
+					collector.collect(tmp, tmpkey);
+				}
+			}
+		}
+	}
+	public class CustomPartitioner implements Partitioner<Pair, DoubleWritable>
+	{
+
+		@Override
+		public int getPartition(Pair key, DoubleWritable value, int numReduceTasks) 
+		{
+			return (int) key.Firstword % numReduceTasks;
+		}
+
+		@Override
+		public void configure(JobConf arg0) {
+			// TODO Auto-generated method stub
+
+		}
+	}
+
+
+	public static void main(String[] args) throws Exception {
+		JobConf conf = new JobConf(Hybrid.class);
+
+		conf.setJobName("Hybrid");
+
+		conf.setOutputKeyClass(Pair.class);
+		conf.setOutputValueClass(DoubleWritable.class);
+
+		conf.setMapperClass(Map.class);
+		conf.setReducerClass(Reduce.class);
+		conf.setPartitionerClass(CustomPartitioner.class);
+
+		conf.setInputFormat(TextInputFormat.class);
+		conf.setOutputFormat(TextOutputFormat.class);
+
+		FileInputFormat.setInputPaths(conf, new Path(args[0]));
+		FileOutputFormat.setOutputPath(conf, new Path(args[1]));
+
+		JobClient.runJob(conf);
+	}
+}

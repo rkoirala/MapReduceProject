@@ -1,0 +1,65 @@
+package com.algorithm.stripes;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
+
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reducer;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.*;
+
+public class StripesReducer extends MapReduceBase implements
+		Reducer<LongWritable, MapWritable, LongWritable, Text> {
+
+	double total = 1;
+
+	public void reduce(LongWritable key, Iterator<MapWritable> values,
+			OutputCollector<LongWritable, Text> output, Reporter reporter)
+			throws IOException {
+		double sum = 0;
+
+		MapWritable hash = new MapWritable();
+		MapWritable tmp = new MapWritable();
+		Iterator<Writable> it;
+		Text tmpkey = new Text();
+		String strtmp;
+
+		DoubleWritable one = new DoubleWritable(1);
+		while (values.hasNext()) {
+			tmp = new MapWritable();
+			tmp = values.next();
+			it = tmp.keySet().iterator();
+
+			while (it.hasNext()) {
+				tmpkey = new Text();
+				tmpkey = (Text) it.next();
+				sum += ((DoubleWritable) tmp.get(tmpkey)).get();
+				one = new DoubleWritable(1);
+				if (hash.containsKey(tmpkey)) {
+
+					one = (DoubleWritable) hash.get(tmpkey);
+					one.set(one.get() + 1);
+					hash.put(tmpkey, one);
+
+				} else
+					hash.put(tmpkey, one);
+			}
+		}
+		for (Writable name : hash.keySet()) {
+			tmpkey = new Text();
+			tmpkey = (Text) name;
+			strtmp = "";
+			strtmp += tmpkey;
+			one = new DoubleWritable(1);
+			one = (DoubleWritable) hash.get(tmpkey);
+			one.set(one.get() / sum);
+			strtmp += "," + one.get();
+			tmpkey.set(strtmp);
+			output.collect(key, tmpkey);
+
+		}
+	}
+}

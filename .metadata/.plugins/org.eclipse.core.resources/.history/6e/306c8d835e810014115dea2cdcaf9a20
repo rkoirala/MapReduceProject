@@ -1,0 +1,27 @@
+/**
+ *
+ * @author rachana
+ */
+
+package com.algorithm.pairs;
+
+import org.apache.hadoop.mapred.Partitioner;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.mapred.JobConf;
+
+public class RelativeFrequencyPartitioner implements
+		Partitioner<Pair, DoubleWritable> {
+
+	@Override
+	public void configure(JobConf arg0) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public int getPartition(Pair arg0, DoubleWritable arg1, int arg2) {
+		// TODO Auto-generated method stub
+		return (int) (arg0.word() % arg2);
+	}
+
+}

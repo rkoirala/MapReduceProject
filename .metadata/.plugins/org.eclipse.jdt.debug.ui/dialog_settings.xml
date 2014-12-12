@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.jdt.debug.ui.MAIN_METHOD_SELECTION_DIALOG">
+		<item value="true" key="ShowStatusLine"/>
+		<item value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&#x0A;&lt;History&gt;&#x0A;&lt;historyRootNode&gt;&#x0A;&lt;infoNode&gt;=MapReduceProject/\/home\/rachana\/BigDataProject\/hadoop-common-2.4.0.jar&amp;lt;org.apache.hadoop.io(ArrayFile.class[ArrayFile&lt;/infoNode&gt;&#x0A;&lt;infoNode&gt;=MapReduceProject/\/home\/rachana\/BigDataProject\/hadoop-2.6.0\/share\/hadoop\/common\/lib\/mockito-all-1.8.5.jar&amp;lt;org.mockito.asm.util(ASMifierClassVisitor.class[ASMifierClassVisitor&lt;/infoNode&gt;&#x0A;&lt;infoNode&gt;=TestHadoop/\/home\/rachana\/BigDataProject\/hadoop-mapreduce-client-core-2.4.0.jar&amp;lt;org.apache.hadoop.mapreduce.util(ConfigUtil.class[ConfigUtil&lt;/infoNode&gt;&#x0A;&lt;infoNode&gt;=MapReduceProject/\/home\/rachana\/BigDataProject\/hadoop-common-2.4.0.jar&amp;lt;org.apache.hadoop.io(SetFile.class[SetFile&lt;/infoNode&gt;&#x0A;&lt;/historyRootNode&gt;&#x0A;&lt;/History&gt;" key="History"/>
+		<section name="DialogBoundsSettings">
+			<item value="600" key="DIALOG_WIDTH"/>
+			<item value="1|Ubuntu|11.0|0|GTK|1|" key="DIALOG_FONT_NAME"/>
+			<item value="500" key="DIALOG_HEIGHT"/>
+			<item value="350" key="DIALOG_X_ORIGIN"/>
+			<item value="53" key="DIALOG_Y_ORIGIN"/>
+		</section>
+	</section>
+</section>

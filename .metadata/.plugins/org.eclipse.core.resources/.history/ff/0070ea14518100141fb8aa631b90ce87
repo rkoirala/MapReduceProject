@@ -1,0 +1,68 @@
+/**
+*
+* @author rachana
+*/
+
+package com.algorithm.pairs;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.hadoop.io.WritableComparable;
+
+public class Pair implements WritableComparable<Pair>{
+	long a,b;
+	
+	public long getA() {
+		return a;
+	}
+	public void setA(long a) {
+		this.a = a;
+	}
+	public long getB() {
+		return b;
+	}
+	public void setB(long b) {
+		this.b = b;
+	}
+	public long word(){return a;}
+	public long neighbor(){return b;}	
+
+	public String toString()
+	{
+		return a+", "+b;
+		
+	}	
+	
+	public int hashCode(){
+		return new String(a+"-"+b).hashCode();
+	}
+	
+	
+	@Override
+	public int compareTo(Pair p) {
+		if(this.a>p.word())
+			return 1;
+		if(this.a==p.word()){
+			if(this.b==p.neighbor())
+				return 0;
+			else if(this.b > p.neighbor())
+				return 1;
+			else
+				return -1;		
+		}
+		else 
+			return -1;
+	}
+	@Override
+	public void readFields(DataInput arg0) throws IOException {
+		a = arg0.readLong();
+		b = arg0.readLong();
+	}
+	@Override
+	public void write(DataOutput arg0) throws IOException {
+		arg0.writeLong(a);
+		arg0.writeLong(b);
+	}
+}

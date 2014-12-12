@@ -1,0 +1,140 @@
+package com.algorithm.pairs;
+
+import java.io.IOException;
+import java.util.*;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapred.*;
+
+public class PairsInMapper {
+
+	public static class Map extends MapReduceBase implements Mapper<LongWritable, Text, Pair, DoubleWritable> {
+
+		private OutputCollector<Pair, DoubleWritable> collector = null;
+		Hashtable<Pair, DoubleWritable> table=new Hashtable<>();
+
+		public void map(LongWritable key, Text value,OutputCollector<Pair, DoubleWritable> output, Reporter reporter) throws IOException {
+			String line = value.toString();
+			DoubleWritable one = new DoubleWritable(1);
+			DoubleWritable oneTemp= new DoubleWritable(1);
+			int i =0;
+			String[] tokenizer = line.split(" ");
+			String[] strarr =line.split(" ");
+
+			Pair p=new Pair();
+			collector = output;
+			for(String s :tokenizer ) {
+				i++;
+				for(int y=i;y<strarr.length;y++)
+				{
+					if(!strarr[y].equals(s))
+					{
+						one = new DoubleWritable(1);
+						oneTemp= new DoubleWritable(1);
+						p=new Pair();
+						p.Firstword= Long.parseLong(s);
+						p.Second=strarr[y];
+
+						if(table.containsKey(p))
+						{
+							one=table.get(p);
+							one.set(one.get()+1);
+						}
+						table.put(p,one);
+
+						p=new Pair();
+						p.Firstword= Long.parseLong(s);
+						p.Second="*";
+						if(table.containsKey(p))
+						{
+							oneTemp = table.get(p);
+							oneTemp.set(oneTemp.get()+1);
+
+						}
+						table.put(p, oneTemp);
+
+					}
+					else
+					{
+						break;
+					}
+				}
+			}
+		}
+		@Override
+		public void close() throws IOException {
+			Set<Pair> keys =table.keySet();
+			for(Pair key :keys)
+			{
+				DoubleWritable d=table.get(key);
+				collector.collect(key, d);
+
+			}
+		}
+
+
+	}
+
+
+	public static class Reduce extends MapReduceBase implements Reducer<Pair, DoubleWritable, Pair, DoubleWritable> {
+
+		double total=0;
+
+
+		public void reduce(Pair key, Iterator<DoubleWritable> values, OutputCollector<Pair, DoubleWritable> output, Reporter reporter) throws IOException {
+			double sum = 0;
+
+			while (values.hasNext()) {
+
+				sum += values.next().get();
+			}
+			if(key.Second.equals("*"))
+			{
+				total=0;
+				total=sum;
+
+
+			}
+			else
+				output.collect(key, new DoubleWritable((sum/total)));
+		}
+	}
+	public class CustomPartitioner implements Partitioner<Pair, DoubleWritable>
+	{
+
+		@Override
+		public int getPartition(Pair key, DoubleWritable value, int numReduceTasks) 
+		{
+
+			return (int) key.Firstword % numReduceTasks;
+		}
+
+		@Override
+		public void configure(JobConf arg0) {
+			// TODO Auto-generated method stub
+
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		JobConf conf = new JobConf(PairsInMapper.class);
+
+		conf.setJobName("PairsInMapper");
+
+		conf.setOutputKeyClass(Pair.class);
+		conf.setOutputValueClass(DoubleWritable.class);
+
+		conf.setMapperClass(Map.class);
+		conf.setPartitionerClass(CustomPartitioner.class);
+		conf.setReducerClass(Reduce.class);
+
+		conf.setInputFormat(TextInputFormat.class);
+		conf.setOutputFormat(TextOutputFormat.class);
+
+		FileInputFormat.setInputPaths(conf, new Path(args[0]));
+		FileOutputFormat.setOutputPath(conf, new Path(args[1]));
+
+		JobClient.runJob(conf);
+	}
+}
